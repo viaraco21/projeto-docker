@@ -10,6 +10,12 @@ on:
 jobs:
   CI:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      security-events: write
+
     steps:
     - name: Obtendo o código
       uses: actions/checkout@v3
@@ -23,10 +29,22 @@ jobs:
       with: 
         context: ./src
         file: ./src/Dockerfile
-        push: true
+        push: false
         tags: |
           fabricioveronez/kube-news:${{github.run_number}}
           fabricioveronez/kube-news:latest                
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@v0.16.1
+      with:
+        image-ref: fabricioveronez/kube-news:${{github.run_number}}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v1
+      with:
+        sarif_file: 'trivy-results.sarif'
 
   CD:
     runs-on: ubuntu-latest
